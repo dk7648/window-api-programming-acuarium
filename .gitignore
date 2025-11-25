@@ -1,0 +1,33 @@
+# Build results
+Debug/
+Release/
+x64/
+*.exe
+*.dll
+*.obj
+*.pch
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# Visual Studio cache
+.vs/
+ipch/
+
+# Logs and temp
+*.log
+*.tmp
+
+# User-specific files
+*.user
+*.suo
+*.opensdf
+*.sdf
+*.db
+*.opendb
+
+# Others
+*.cache
+*.aps
+Thumbs.db
