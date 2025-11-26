@@ -13,11 +13,10 @@ LPCTSTR lpszClass = _T("FishGame");
 typedef struct {
     RECT r;
     int active;
-    int size;   // 렌더링 크기
+    int size;
     int speed;
 } EmptyObj;
 
-// 플레이어는 중심좌표 기반
 static int playerX, playerY;
 
 int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmd) {
@@ -52,7 +51,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
     static EmptyObj empty[EMPTY_MAX];
     static HBITMAP hMap, hPlayer, hEmpty, hBonus;
-    static RECT cR, bonusR, playerR;
+    static RECT mapR, bonusR, playerR;
 
     static int bonusW, bonusH;
     static int playerW, playerH;
@@ -72,11 +71,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
 
     case WM_CREATE: {
-        GetClientRect(hWnd, &cR);
-        POINT p = CenterPoint(cR);
+        GetClientRect(hWnd, &mapR);
+        POINT p = CenterPoint(mapR);
         playerX = p.x;
-        playerY = cR.bottom - 120;
-
+        playerY = mapR.bottom - 120;
+        grow = 0;
+        bonusAlphaX = 2, bonusAlphaY = 1;
+        playerAlphaX = 0, playerAlphaY = 0;
 
         hMap = LoadBitmap(g_hInst, MAKEINTRESOURCE(IDB_BACKGROUND));
 
@@ -99,44 +100,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         for (int i = 0; i < EMPTY_MAX; i++) empty[i].active = 0;
 
-        // 타이머 등록
         SetTimer(hWnd, 1, 30, NULL);
-        SetTimer(hWnd, 3, 2000, NULL);
-        SetTimer(hWnd, 4, 40, NULL);
+        SetTimer(hWnd, 2, 40, NULL);
 
-        // 시간 시작
+        // 타이머
         playTime = 0;
-        SetTimer(hWnd, 10, 1000, NULL);
-
-
-        grow = 0;
-        bonusAlphaX = 2, bonusAlphaY = 1;
-        playerAlphaX = 0, playerAlphaY = 0;
+        SetTimer(hWnd, 3, 1000, NULL);
+        
         return 0;
     }
 
-                  // ==========================================
-                  // 타이머
-                  // ==========================================
     case WM_TIMER:
         switch (wParam) {
 
-            // 먹이 + 플레이어 이동
+        // 보너스 및 플레이어 이동
         case 1: {
-            if (CheckStrikeX(bonusR, cR)) bonusAlphaX *= -1;
-            if (CheckStrikeY(bonusR, cR)) bonusAlphaY *= -1;
+            if (CheckStrikeX(bonusR, mapR)) bonusAlphaX *= -1;
+            if (CheckStrikeY(bonusR, mapR)) bonusAlphaY *= -1;
             OffsetRect(&bonusR, bonusAlphaX, bonusAlphaY);
 
-            if (CheckStrikeX(playerR, cR)) playerAlphaX *= -1;
-            if (CheckStrikeY(playerR, cR)) playerAlphaY *= -1;
+            if (CheckStrikeX(playerR, mapR)) playerAlphaX *= -1;
+            if (CheckStrikeY(playerR, mapR)) playerAlphaY *= -1;
             OffsetRect(&playerR, playerAlphaX, playerAlphaY);
 
-            InvalidateRect(hWnd, NULL, FALSE);
-            break;
-        }
-
-              // 먹이 애니메이션
-        case 3: {
             int spawnCount = 4 + (rand() % 5);
 
             for (int k = 0; k < spawnCount; k++) {
@@ -166,14 +152,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 if (side == 0) {
                     E.r.left = -E.size;
                     E.r.right = 0;
-                    E.r.top = rand() % (cR.bottom - E.size);
+                    E.r.top = rand() % (mapR.bottom - E.size);
                     E.r.bottom = E.r.top + E.size;
                     E.speed = speed;
                 }
                 else {
-                    E.r.right = cR.right + E.size;
+                    E.r.right = mapR.right + E.size;
                     E.r.left = E.r.right - E.size;
-                    E.r.top = rand() % (cR.bottom - E.size);
+                    E.r.top = rand() % (mapR.bottom - E.size);
                     E.r.bottom = E.r.top + E.size;
                     E.speed = -speed;
                 }
@@ -181,17 +167,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 E.active = 1;
             }
             break;
-        }
 
-              // Empty 이동 + 충돌 판정
-        case 4: {
+
+            InvalidateRect(hWnd, NULL, FALSE);
+            break;
+        }
+        case 2: {
             for (int i = 0; i < EMPTY_MAX; i++) {
                 if (!empty[i].active) continue;
 
                 EmptyObj& E = empty[i];
                 OffsetRect(&E.r, E.speed, 0);
-
-                if (E.r.right < 0 || E.r.left > cR.right) {
+                // 맵 끝에 도달 시 삭제
+                if (E.r.right < 0 || E.r.left > mapR.right) {
                     E.active = 0;
                     continue;
                 }
@@ -219,7 +207,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                         KillTimer(hWnd, 4);
                         KillTimer(hWnd, 10);
 
-                        // ---- 메시지 문자열 제작 ----
+                        // 패배 메시지
                         TCHAR msg[256];
                         wsprintf(msg,
                             _T("더 큰 물고기에게 잡아먹혔습니다.\n\n")
@@ -229,17 +217,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                             (int)playTime, grow
                         );
 
-                        // ---- MessageBox ----
+                        // 패배
                         int ret = MessageBox(hWnd, msg, _T("GAME OVER"), MB_YESNO);
 
                         if (ret == IDYES) {
                             grow = 0;
                             playerAlphaX = playerAlphaY = 0;
 
-                            playerX = cR.right / 2;
-                            playerY = cR.bottom - 120;
+                            playerX = mapR.right / 2;
+                            playerY = mapR.bottom - 120;
 
-                            POINT p = CenterPoint(cR);
+                            POINT p = CenterPoint(mapR);
                             SetRect(&bonusR, p.x - 50, p.y - 50, p.x + 50, p.y + 50);
 
                             for (int j = 0; j < EMPTY_MAX; j++) empty[j].active = 0;
@@ -263,7 +251,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                         KillTimer(hWnd, 4);
                         KillTimer(hWnd, 10);
 
-                        // ---- 메시지 문자열 제작 ----
+                        // 승리 메시지
                         TCHAR msg[256];
                         wsprintf(msg,
                             _T("바다의 제왕이 되었습니다.\n\n")
@@ -272,17 +260,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                             (int)playTime
                         );
 
-                        // ---- MessageBox ----
+                        // 승리
                         int ret = MessageBox(hWnd, msg, _T("GAME CLEAR !!"), MB_YESNO);
 
                         if (ret == IDYES) {
                             grow = 0;
                             playerAlphaX = playerAlphaY = 0;
 
-                            playerX = cR.right / 2;
-                            playerY = cR.bottom - 120;
+                            playerX = mapR.right / 2;
+                            playerY = mapR.bottom - 120;
 
-                            POINT p = CenterPoint(cR);
+                            POINT p = CenterPoint(mapR);
                             SetRect(&bonusR, p.x - 50, p.y - 50, p.x + 50, p.y + 50);
 
                             for (int j = 0; j < EMPTY_MAX; j++) empty[j].active = 0;
@@ -300,11 +288,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                         break;
                     }
                 }
+                // 보너스 물고기 충돌
                 else if (IntersectRect(&inter, &bonusR, &playerR)) {
-                    grow++;   // 점수 증가
-                    // 먹이 재스폰
-                    bonusR.left = rand() % (cR.right - bonusW);
-                    bonusR.top = rand() % (cR.bottom - bonusH);
+                    grow++;
+                    bonusR.left = rand() % (mapR.right - bonusW);
+                    bonusR.top = rand() % (mapR.bottom - bonusH);
                     bonusR.right = bonusR.left + bonusW;
                     bonusR.bottom = bonusR.top + bonusH;
                 }
@@ -314,17 +302,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             break;
         }
 
-              // 시간 갱신
-        case 10: {
+        case 3: {
             playTime++;
             break;
         }
         }
         return 0;
 
-        // ==========================================
-        // 키 입력
-        // ==========================================
     case WM_KEYDOWN:
         switch (wParam) {
         case VK_LEFT:  playerAlphaX = -4; playerAlphaY = 0; break;
@@ -334,9 +318,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         }
         return 0;
 
-        // ==========================================
-        // 페인트
-        // ==========================================
     case WM_PAINT: {
         hdc = BeginPaint(hWnd, &ps);
         mem = CreateCompatibleDC(hdc);
@@ -344,7 +325,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         // 배경
         SelectObject(mem, hMap);
         GetObject(hMap, sizeof(bm), &bm);
-        StretchBlt(hdc, 0, 0, cR.right, cR.bottom,
+        StretchBlt(hdc, 0, 0, mapR.right, mapR.bottom,
             mem, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY);
 
         // 먹이
@@ -397,9 +378,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             int drawX = ex;
             int drawW = es;
 
-            // ← 이동 중이면 좌우 반전
+            // 이동 방향에 따른 뒤집기
             if (empty[i].speed < 0) {
-                drawX = empty[i].r.right; // 우측 기준으로 뒤집기
+                drawX = empty[i].r.right;
                 drawW = -es;
             }
 
@@ -415,7 +396,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             );
         }
 
-        // ---------- 점수 표시 ----------
+        // ------- UI -------
         SetBkMode(hdc, TRANSPARENT);
         SetTextColor(hdc, RGB(255, 255, 255));
 
@@ -424,10 +405,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         TextOut(hdc, 10, 10, buf, lstrlen(buf));
 
         TCHAR buf2[64];
-        int t = (int)(playTime * 10); // 0.1sec 단위 정수
         wsprintf(buf2, _T("Time: %ds"), (int)playTime);
 
-        TextOut(hdc, cR.right - 150, 10, buf2, lstrlen(buf2));
+        TextOut(hdc, mapR.right - 150, 10, buf2, lstrlen(buf2));
 
         DeleteDC(mem);
         EndPaint(hWnd, &ps);
