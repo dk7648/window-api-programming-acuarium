@@ -100,8 +100,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         for (int i = 0; i < EMPTY_MAX; i++) empty[i].active = 0;
 
-        SetTimer(hWnd, 1, 30, NULL);
-        SetTimer(hWnd, 2, 40, NULL);
+        SetTimer(hWnd, 1, 40, NULL);
+        SetTimer(hWnd, 2, 50, NULL);
 
         // 타이머
         playTime = 0;
@@ -149,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 int speed = 3 + rand() % 10;
                 int side = rand() % 2;
 
-                if (side == 0) {
+                if (side == 0) { // 생성 방향에 따른 처리
                     E.r.left = -E.size;
                     E.r.right = 0;
                     E.r.top = rand() % (mapR.bottom - E.size);

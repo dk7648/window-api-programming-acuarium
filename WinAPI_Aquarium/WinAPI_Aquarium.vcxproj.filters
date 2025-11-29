@@ -42,15 +42,6 @@
     <Image Include="BONUS1.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="BONUS2.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BONUS3.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="BONUS4.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
     <Image Include="PLAYER.bmp">
       <Filter>리소스 파일</Filter>
     </Image>

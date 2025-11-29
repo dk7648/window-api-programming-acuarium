@@ -139,9 +139,6 @@
     <Image Include="BACKGROUND.bmp" />
     <Image Include="EMPTY1.bmp" />
     <Image Include="BONUS1.bmp" />
-    <Image Include="BONUS2.bmp" />
-    <Image Include="BONUS3.bmp" />
-    <Image Include="BONUS4.bmp" />
     <Image Include="PLAYER.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
